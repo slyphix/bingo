@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BINGO Board Generator</title>
+<script type="text/javascript">
+let init = () => {
+
+    // page layouts
+    const SINGLE_BOARD_LAYOUT = 1;
+    const TWO_BOARDS_PER_PAGE_LAYOUT = 2;
+    const SIX_BOARDS_PER_PAGE_LAYOUT = 6;
+
+    // BETA select layout here, six board layout is buggy.
+    const BOARDS_PER_PAGE = TWO_BOARDS_PER_PAGE_LAYOUT;
+
+    const PRINT_ROOT = document.getElementById("print");
+    const PREVIEW_ROOT = document.getElementById("preview");
+    const UPLOAD_FIELD = document.getElementById("file-field");
+    const PAGES_FIELD = document.getElementById("pages");
+    const DROP_AREA = document.getElementById("drop-area");
+    const URL_FIELD = document.getElementById("url-field");
+    const URL_FORM = document.getElementById("url-form");
+
+    if (BOARDS_PER_PAGE === TWO_BOARDS_PER_PAGE_LAYOUT)
+        PRINT_ROOT.classList.add('two-boards');
+
+    if (BOARDS_PER_PAGE === SIX_BOARDS_PER_PAGE_LAYOUT)
+        PRINT_ROOT.classList.add('six-boards');
+
+    let labels;
+    let centerLabel;
+    let pageCount = PAGES_FIELD.value;
+
+    const FILE_URL_PARAM_NAME = "url";
+    const searchParams = new URLSearchParams(new URL(window.location).search);
+    const hash = location.hash.substr(1);
+
+    let parseText = text => {
+        let lines = text.split(/\r?\n/g).filter(l => l.length > 0);
+        if (lines.length < 25)
+            throw new Error("File too short!");
+
+        [centerLabel, ...labels] = lines;
+        generateSample();
+        generatePages();
+    };
+
+    let generateSample = () => {
+        if (!labels) return;
+
+        while (PREVIEW_ROOT.hasChildNodes())
+            PREVIEW_ROOT.removeChild(PREVIEW_ROOT.firstChild);
+
+        PREVIEW_ROOT.appendChild(randomGrid());
+    };
+
+    let generatePages = () => {
+        if (!labels) return;
+
+        while (PRINT_ROOT.hasChildNodes())
+            PRINT_ROOT.removeChild(PRINT_ROOT.firstChild);
+
+        for (let p = 0; p < pageCount; p++) {
+
+            const page = document.createElement("div");
+            page.className = "page";
+
+            for (let g = 0; g < BOARDS_PER_PAGE; g++) {
+                const entry = document.createElement("div");
+                entry.className = "entry";
+                entry.appendChild(randomGrid());
+                page.appendChild(entry);
+            }
+
+            PRINT_ROOT.appendChild(page);
+        }
+    };
+
+    let makeGrid = entries => {
+        let grid = document.createElement("div");
+        grid.className = "board";
+
+        for (let r = 0; r < 5; r++) {
+            const row = document.createElement("div");
+            row.className = "row";
+
+            for (let i = 0; i < 5; i++) {
+                const cell = document.createElement("div");
+                cell.className = "cell";
+                cell.innerText = entries[5 * r + i];
+                row.appendChild(cell);
+            }
+            grid.appendChild(row);
+        }
+
+        return grid;
+    };
+
+    let shuffle = array => {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    };
+
+    let randomGrid = () => {
+        shuffle(labels);
+        const entries = [...labels.slice(0, 12), centerLabel, ...labels.slice(12, 24)];
+        return makeGrid(entries);
+    };
+
+    let loadFromURL = url => {
+        fetch(url).then(response => response.text()).then(parseText);
+    };
+    let loadFromFile = file => {
+        let reader = new FileReader();
+        reader.onload = ev => parseText(ev.target.result);
+        reader.readAsText(file);
+    };
+
+    // load url if set
+    const url = searchParams.get(FILE_URL_PARAM_NAME) || hash;
+    if (url) loadFromURL(url);
+
+    // set event listeners
+    ['dragenter', 'dragover'].forEach(name => {
+        DROP_AREA.addEventListener(name, _ => DROP_AREA.classList.add('highlight'), false)
+    });
+    ['dragleave', 'drop'].forEach(name => {
+        DROP_AREA.addEventListener(name, _ => DROP_AREA.classList.remove('highlight'), false)
+    });
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(name => {
+        DROP_AREA.addEventListener(name, ev => { ev.preventDefault(); ev.stopPropagation(); }, false)
+    });
+    DROP_AREA.addEventListener('drop', ev => {
+        let files = ev.dataTransfer.files;
+        if (files.length > 0)
+            loadFromFile(files[0]);
+    });
+    DROP_AREA.addEventListener('change', _ => {
+        if (UPLOAD_FIELD.files.length > 0)
+            loadFromFile(UPLOAD_FIELD.files[0]);
+    });
+
+    PAGES_FIELD.addEventListener('change', ev => {
+        pageCount = PAGES_FIELD.value;
+        generatePages();
+    });
+
+    URL_FORM.addEventListener('submit', ev => {
+        ev.stopPropagation();
+        ev.preventDefault();
+
+        const url = URL_FIELD.value;
+        if (url.length === 0) return;
+
+        searchParams.set(FILE_URL_PARAM_NAME, url);
+        history.replaceState({}, '', `${location.pathname}?${searchParams}`);
+        loadFromURL(url);
+    });
+};
+let errorHandler = ev => {
+    alert(ev.error.message);
+};
+addEventListener('load', init);
+addEventListener('error', errorHandler);
+</script>
+<style type="text/css">
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    html, body {
+        width: 100%;
+        height: 100%;
+    }
+    @page {
+        margin: 0.5cm;
+    }
+
+    /* user interface layout */
+    #interface {
+        position: fixed;
+        z-index: 10;
+        box-sizing: border-box;
+        width: 100%;
+        height: 4em;
+        margin: 0;
+        background-color: #428fd3;
+        box-shadow: 0 1px 1px 1px rgba(0, 0, 0, 0.3);
+        display: grid;
+        grid-template-columns: 12em auto 5em;
+        grid-template-rows: auto;
+        font-family: sans-serif;
+        color: white;
+    }
+    /* title layout */
+    #title {
+        text-align: center;
+        font-size: 0.8em;
+    }
+    #title strong {
+        font-size: 3em;
+    }
+    /* upload box layout */
+    #drop-area {
+        height: 3.6em;
+        margin: 0.2em;
+        box-sizing: border-box;
+        padding: 0.5em;
+        border: 2px dashed lightgrey;
+        text-align: center;
+        overflow: hidden;
+    }
+    #drop-area.highlight {
+        border-style: solid;
+        background-color: rgba(255, 255, 255, 0.3);
+    }
+    #drop-area #file-field {
+        display: none;
+    }
+    #drop-area .file-button {
+        font-size: 1.2em;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    #drop-area .url-desc {
+        font-size: 0.8em;
+    }
+    #drop-area #url-field {
+        border: none;
+        background-color: rgba(255, 255, 255, 0.2);
+        box-shadow: rgba(0, 0, 0, 0.2) 1px 1px 1px 1px inset;
+        color: white;
+        padding: 1px;
+    }
+    /* page count box layout */
+    #page-count-area {
+        text-align: center;
+        height: 3.6em;
+        margin: 0.2em;
+        box-sizing: border-box;
+        padding: 0.5em 0;
+        overflow: hidden;
+    }
+    #page-count-area .pages-desc {
+        font-size: 0.8em;
+    }
+    #page-count-area #pages {
+        width: 100%;
+        border: none;
+        color: white;
+        padding-right: 1px;
+        text-align: right;
+        font-size: 1.5em;
+        font-weight: bold;
+        background-color: transparent;
+    }
+
+    /* preview layout */
+    #preview-container {
+        position: absolute;
+        max-width: 40em;
+        width: calc(100% - 2em);
+        margin: 5em 1em 1em;
+    }
+    /* force height = width */
+    #preview-container:before {
+         content: "";
+         display: block;
+         padding-top: 100%;
+    }
+    #preview {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* print layouts */
+    .page {
+        width: 100%;
+        display: grid;
+        justify-content: space-evenly;
+        page-break-after: always;
+    }
+    .page .entry {
+        margin: 5mm auto;
+        width: 19cm;
+        height: 19cm;
+        box-sizing: border-box;
+    }
+    .two-boards .page {
+        grid-template-columns: auto;
+        grid-template-rows: auto auto;
+    }
+    .two-boards .page .entry {
+        margin: 1mm auto;
+        width: 14cm;
+        height: 14cm;
+    }
+    .six-boards .page {
+        grid-template-columns: auto auto;
+        grid-template-rows: auto auto auto;
+    }
+    .six-boards .page .entry {
+        margin: 2mm auto;
+        width: 9cm;
+        height: 9cm;
+    }
+
+    /* viewport-independent board layout */
+    .board {
+        display: table;
+        border-collapse: collapse;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+    }
+    .board .row {
+        display: table-row;
+    }
+    .board .row .cell {
+        display: table-cell;
+        box-sizing: border-box;
+        padding: 1pt;
+        width: 20%;
+        height: 20%;
+        text-align: center;
+        vertical-align: middle;
+        font: 9pt sans-serif;
+        border: 2pt solid #444;
+    }
+
+    /* media-specific settings */
+    @media print {
+        #preview-container, #interface {
+            display: none;
+        }
+    }
+    @media screen {
+        #print {
+            display: none;
+        }
+    }
+</style>
+</head>
+<body>
+    <div id="interface">
+        <span id="title">
+            <strong>BINGO</strong><br>
+            WEB GENERATOR
+        </span>
+        <div id="drop-area">
+            <form id="file-form">
+                <input id="file-field" type="file" accept="text/*">
+                <label class="file-button" for="file-field">Drag-and-drop a file or click here to upload!</label>
+            </form>
+            <form id="url-form">
+                <label class="url-desc" for="url-field">... or enter a URL here:</label>
+                <input id="url-field" type="text">
+            </form>
+        </div>
+        <div id="page-count-area">
+            <input id="pages" type="number" value="1" min="1"><br>
+            <label class="pages-desc" for="pages">PAGES</label>
+        </div>
+    </div>
+    <div id="preview-container">
+        <div id="preview"></div>
+    </div>
+    <div id="print"></div>
+</body>
+</html>
