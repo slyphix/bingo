@@ -1,5 +1,7 @@
 ## Bingo Board Generator (Web Edition)
 
+**Disclaimer:** I wrote this over the course of three days. The code base is a mess.
+
 This is a web version of [lazyguyy's bingo board generator](https://github.com/lazyguyy).
 I figured running a web browser is easier than compiling a LaTeX template. You can access a
 demo hosted by GitHub [right here](https://slyphix.github.io/bingo/).
