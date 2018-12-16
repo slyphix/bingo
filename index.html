@@ -259,24 +259,11 @@ addEventListener('error', errorHandler);
     }
 
     /* preview layout */
-    #preview-container {
-        position: absolute;
-        max-width: 40em;
-        width: calc(100% - 2em);
-        margin: 5em 1em 1em;
-    }
-    /* force height = width */
-    #preview-container:before {
-         content: "";
-         display: block;
-         padding-top: 100%;
-    }
     #preview {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        width: 40em;
+        height: 40em;
+        margin: 5em 1em 1em;
     }
 
     /* print layouts */
@@ -336,7 +323,7 @@ addEventListener('error', errorHandler);
 
     /* media-specific settings */
     @media print {
-        #preview-container, #interface {
+        #preview, #interface {
             display: none;
         }
     }
@@ -368,9 +355,7 @@ addEventListener('error', errorHandler);
             <label class="pages-desc" for="pages">PAGES</label>
         </div>
     </div>
-    <div id="preview-container">
-        <div id="preview"></div>
-    </div>
+    <div id="preview"></div>
     <div id="print"></div>
 </body>
 </html>
