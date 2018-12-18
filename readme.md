@@ -19,3 +19,4 @@ Use your browser's print preview to inspect the generated pages.
 
 #### Pending features
 - sensible error handling
+- allow font size configuration
