@@ -146,8 +146,11 @@ let init = () => {
 
     DROP_AREA.addEventListener('drop', ev => {
         let files = ev.dataTransfer.files;
-        if (files.length > 0)
+        if (files.length > 0) {
             loadFromFile(files[0]);
+        } else if (ev.dataTransfer.items.length > 0 && ev.dataTransfer.items[0].kind === 'string') {
+            ev.dataTransfer.items[0].getAsString(parseText);
+        }
     });
     DROP_AREA.addEventListener('change', _ => {
         if (UPLOAD_FIELD.files.length > 0)
@@ -171,6 +174,8 @@ let init = () => {
 };
 let errorHandler = ev => {
     alert(ev.error.message);
+    ev.stopPropagation();
+    ev.preventDefault();
 };
 addEventListener('load', init);
 addEventListener('error', errorHandler);
