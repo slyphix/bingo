@@ -6,13 +6,16 @@
 <script type="text/javascript">
 let init = () => {
 
-    // page layouts
-    const SINGLE_BOARD_LAYOUT = 1;
-    const TWO_BOARDS_PER_PAGE_LAYOUT = 2;
-    const SIX_BOARDS_PER_PAGE_LAYOUT = 6;
+    // --- CONFIGURATION ---
 
-    // BETA select layout here, six board layout is buggy.
-    const BOARDS_PER_PAGE = TWO_BOARDS_PER_PAGE_LAYOUT;
+    const COLUMNS_PER_PAGE = 2;
+    const ROWS_PER_PAGE = 3;
+
+    // A4 format, portrait
+    const PAGE_WIDTH_MILLIMETERS = 210;
+    const PAGE_HEIGHT_MILLIMETERS = 297;
+
+    // --- END CONFIGURATION ---
 
     const PRINT_ROOT = document.getElementById("print");
     const PREVIEW_ROOT = document.getElementById("preview");
@@ -22,11 +25,15 @@ let init = () => {
     const URL_FIELD = document.getElementById("url-field");
     const URL_FORM = document.getElementById("url-form");
 
-    if (BOARDS_PER_PAGE === TWO_BOARDS_PER_PAGE_LAYOUT)
-        PRINT_ROOT.classList.add('two-boards');
+    // margins
+    const PAGE_MARGIN_MILLIMETERS = 5;
+    const CELL_SPACING_MILLIMETERS = 2;
 
-    if (BOARDS_PER_PAGE === SIX_BOARDS_PER_PAGE_LAYOUT)
-        PRINT_ROOT.classList.add('six-boards');
+    // dependent constants
+    const WIDTH_MILLIMETERS = PAGE_WIDTH_MILLIMETERS - 2 * PAGE_MARGIN_MILLIMETERS;
+    const HEIGHT_MILLIMETERS = PAGE_HEIGHT_MILLIMETERS - 2 * PAGE_MARGIN_MILLIMETERS;
+    const BOARDS_PER_PAGE = COLUMNS_PER_PAGE * ROWS_PER_PAGE;
+    const FIELD_SIZE_MILLIMETERS = Math.min(HEIGHT_MILLIMETERS / ROWS_PER_PAGE, WIDTH_MILLIMETERS / COLUMNS_PER_PAGE) - 2 * CELL_SPACING_MILLIMETERS;
 
     let labels;
     let centerLabel;
@@ -64,11 +71,15 @@ let init = () => {
         for (let p = 0; p < pageCount; p++) {
 
             const page = document.createElement("div");
-            page.className = "page";
+            page.className = COLUMNS_PER_PAGE > 1 ? "page narrow" : "page";
+            page.style.gridTemplateColumns = "auto ".repeat(COLUMNS_PER_PAGE);
 
             for (let g = 0; g < BOARDS_PER_PAGE; g++) {
                 const entry = document.createElement("div");
                 entry.className = "entry";
+                entry.style.width = FIELD_SIZE_MILLIMETERS + "mm";
+                entry.style.height = FIELD_SIZE_MILLIMETERS + "mm";
+
                 entry.appendChild(randomGrid());
                 page.appendChild(entry);
             }
@@ -111,7 +122,11 @@ let init = () => {
     };
 
     let loadFromURL = url => {
-        fetch(url).then(response => response.text()).then(parseText);
+        fetch(url).then(response => {
+            if (!response.ok)
+                throw Error(response.statusText);
+            return response.text();
+        }).then(parseText).catch(ex => { throw ex; });
     };
     let loadFromFile = file => {
         let reader = new FileReader();
@@ -124,15 +139,11 @@ let init = () => {
     if (url) loadFromURL(url);
 
     // set event listeners
-    ['dragenter', 'dragover'].forEach(name => {
-        DROP_AREA.addEventListener(name, _ => DROP_AREA.classList.add('highlight'), false)
-    });
-    ['dragleave', 'drop'].forEach(name => {
-        DROP_AREA.addEventListener(name, _ => DROP_AREA.classList.remove('highlight'), false)
-    });
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(name => {
-        DROP_AREA.addEventListener(name, ev => { ev.preventDefault(); ev.stopPropagation(); }, false)
-    });
+    ['dragenter', 'dragover'].forEach(name => DROP_AREA.addEventListener(name, _ => DROP_AREA.classList.add('highlight'), false));
+    ['dragleave', 'drop'].forEach(name => DROP_AREA.addEventListener(name,_ => DROP_AREA.classList.remove('highlight'), false));
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(
+        name => DROP_AREA.addEventListener(name, ev => { ev.preventDefault(); ev.stopPropagation(); }, false));
+
     DROP_AREA.addEventListener('drop', ev => {
         let files = ev.dataTransfer.files;
         if (files.length > 0)
@@ -142,12 +153,10 @@ let init = () => {
         if (UPLOAD_FIELD.files.length > 0)
             loadFromFile(UPLOAD_FIELD.files[0]);
     });
-
-    PAGES_FIELD.addEventListener('change', ev => {
+    PAGES_FIELD.addEventListener('change', _ => {
         pageCount = PAGES_FIELD.value;
         generatePages();
     });
-
     URL_FORM.addEventListener('submit', ev => {
         ev.stopPropagation();
         ev.preventDefault();
@@ -261,6 +270,7 @@ addEventListener('error', errorHandler);
     /* preview layout */
     #preview {
         position: absolute;
+        font: 1em sans-serif;
         width: 40em;
         height: 40em;
         margin: 5em 1em 1em;
@@ -269,45 +279,36 @@ addEventListener('error', errorHandler);
     /* print layouts */
     .page {
         width: 100%;
+        font: 10pt sans-serif;
         display: grid;
         justify-content: space-evenly;
         page-break-after: always;
     }
+    .page.narrow {
+        font-size: 7pt;
+        font-stretch: ultra-condensed;
+    }
     .page .entry {
-        margin: 5mm auto;
+        margin: 2mm auto;
+        font: inherit;
         width: 19cm;
         height: 19cm;
         box-sizing: border-box;
-    }
-    .two-boards .page {
-        grid-template-columns: auto;
-        grid-template-rows: auto auto;
-    }
-    .two-boards .page .entry {
-        margin: 1mm auto;
-        width: 14cm;
-        height: 14cm;
-    }
-    .six-boards .page {
-        grid-template-columns: auto auto;
-        grid-template-rows: auto auto auto;
-    }
-    .six-boards .page .entry {
-        margin: 2mm auto;
-        width: 9cm;
-        height: 9cm;
     }
 
     /* viewport-independent board layout */
     .board {
         display: table;
+        table-layout: fixed;
         border-collapse: collapse;
         box-sizing: border-box;
+        font: inherit;
         width: 100%;
         height: 100%;
     }
     .board .row {
         display: table-row;
+        font: inherit;
     }
     .board .row .cell {
         display: table-cell;
@@ -316,9 +317,9 @@ addEventListener('error', errorHandler);
         width: 20%;
         height: 20%;
         text-align: center;
+        font: inherit;
+        border: 1pt solid #222;
         vertical-align: middle;
-        font: 9pt sans-serif;
-        border: 2pt solid #444;
     }
 
     /* media-specific settings */
