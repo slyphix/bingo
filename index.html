@@ -108,16 +108,16 @@ let init = () => {
         return grid;
     };
 
-    let shuffle = array => {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-    };
-
     let randomGrid = () => {
-        shuffle(labels);
-        const entries = [...labels.slice(0, 12), centerLabel, ...labels.slice(12, 24)];
+        let labelsCopy = labels.slice();
+
+        // reduced fisher-yates
+        for (let i = 0; i < 25; i++) {
+            const j = i + Math.floor(Math.random() * (labelsCopy.length - i));
+            [labelsCopy[i], labelsCopy[j]] = [labelsCopy[j], labelsCopy[i]];
+        }
+
+        const entries = [...labelsCopy.slice(0, 12), centerLabel, ...labelsCopy.slice(12, 24)];
         return makeGrid(entries);
     };
 
@@ -126,7 +126,7 @@ let init = () => {
             if (!response.ok)
                 throw Error(response.statusText);
             return response.text();
-        }).then(parseText).catch(ex => { throw ex; });
+        }).then(parseText).catch(_ => { throw new Error("Could not read file."); });
     };
     let loadFromFile = file => {
         let reader = new FileReader();
