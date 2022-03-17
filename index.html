@@ -100,6 +100,13 @@ let init = () => {
                 const cell = document.createElement("div");
                 cell.className = "cell";
                 cell.innerText = entries[5 * r + i];
+                cell.onclick = function colorField() {
+                    if(this.style.backgroundColor == "lightblue") {
+                        this.style.backgroundColor = "white";
+                    } else {
+                        this.style.backgroundColor = "lightblue";
+                    }
+                };
                 row.appendChild(cell);
             }
             grid.appendChild(row);
@@ -179,6 +186,7 @@ let errorHandler = ev => {
 };
 addEventListener('load', init);
 addEventListener('error', errorHandler);
+
 </script>
 <style type="text/css">
     * {
